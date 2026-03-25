@@ -20,7 +20,7 @@ class Appointment(models.Model):
     doctor = models.ForeignKey(Doctor,on_delete=models.CASCADE)
     hospital = models.ForeignKey(Hospital,on_delete=models.CASCADE)
     appintment_datetime =  models.DateTimeField()
-    status = models.CharField(max_length=10,choices=STATUS_CHOICES)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="PENDING")
     reason = models.TextField()
 
     def __str__(self):
