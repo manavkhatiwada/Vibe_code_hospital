@@ -1,9 +1,7 @@
-from django.db import models
+import uuid
 
-# Create your models here.
-import uuid 
-from django.db import models 
 from django.contrib.auth.models import AbstractUser
+from django.db import models
 
 
 
@@ -24,7 +22,9 @@ class User(AbstractUser):
     updated_at = models.DateTimeField(auto_now=True)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ['username']
+    # When `USERNAME_FIELD` is `email`, Django's `createsuperuser` command will
+    # prompt only for `REQUIRED_FIELDS` besides the email + password.
+    REQUIRED_FIELDS = ["username", "role"]
 
     def __str__(self):
         return self.email 

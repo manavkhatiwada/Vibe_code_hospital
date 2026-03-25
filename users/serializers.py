@@ -1,12 +1,18 @@
 from rest_framework import serializers
-from .models import users
+from .models import User
 
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
-        model = users
-        fields = ['email','username','password','role']
-        extra_kwargs = {'password':{'write_only':True}}
+        model = User
+        fields = ["id", "email", "username", "password", "role"]
+        extra_kwargs = {"password": {"write_only": True}}
 
     def create(self, validated_data):
-        user = users.objects.create_user(validated_data['email'],validated_data['username'],validated_data['password'],validated_data['role'])
-        return user
+        # Django's `UserManager.create_user()` hashes the password (make_password)
+        # before saving.
+        return User.objects.create_user(
+            validated_data["username"],
+            validated_data["email"],
+            validated_data["password"],
+            role=validated_data["role"],
+        )
