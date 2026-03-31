@@ -43,7 +43,7 @@ export default function ManageDoctors() {
   };
 
   return (
-    <ProtectedRoute allowedRoles={['hospital']}>
+    <ProtectedRoute allowedRoles={['hospital', 'admin']}>
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center space-x-4 mb-8">

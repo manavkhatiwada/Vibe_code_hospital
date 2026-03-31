@@ -10,7 +10,7 @@ class User(AbstractUser):
     ROLE_CHOICES = (
         ('PATIENT', 'patient'),
         ('DOCTOR','doctor'),
-        ('HOSPITAL','hospital'),
+        ('ADMIN','admin'),
     )
 
     id = models.UUIDField(primary_key=True,default= uuid.uuid4,editable=False)
@@ -25,6 +25,11 @@ class User(AbstractUser):
     # When `USERNAME_FIELD` is `email`, Django's `createsuperuser` command will
     # prompt only for `REQUIRED_FIELDS` besides the email + password.
     REQUIRED_FIELDS = ["username", "role"]
+
+    @property
+    def name(self):
+        # Keep compatibility with UI/business language that uses `name`.
+        return self.username
 
     def __str__(self):
         return self.email 

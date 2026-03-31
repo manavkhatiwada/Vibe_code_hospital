@@ -10,44 +10,28 @@ export default function HospitalDashboard() {
     patients: 0,
     pending: 0,
     completed: 0,
+    records: 0,
   });
   const [recentAppointments, setRecentAppointments] = useState([]);
-  const [doctors, setDoctors] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([api.get('/doctors/'), api.get('/appointments/')])
-      .then(([doctorsRes, appointmentsRes]) => {
+    api.get('/dashboard/stats/')
+      .then((statsRes) => {
         if (!mounted) return;
 
-        const doctorsData = doctorsRes.data || [];
-        const appointmentsData = appointmentsRes.data || [];
-
-        const uniquePatients = new Set(
-          appointmentsData
-            .map((appt) => appt.patient)
-            .filter(Boolean)
-        );
-
-        const pendingCount = appointmentsData.filter(
-          (appt) => String(appt.status || '').toUpperCase() === 'PENDING'
-        ).length;
-        const completedCount = appointmentsData.filter(
-          (appt) => String(appt.status || '').toUpperCase() === 'COMPLETED'
-        ).length;
-
-        setDoctors(doctorsData);
+        const data = statsRes.data || {};
         setStats({
-          doctors: doctorsData.length,
-          appointments: appointmentsData.length,
-          patients: uniquePatients.size,
-          pending: pendingCount,
-          completed: completedCount,
+          doctors: data.total_doctors || 0,
+          appointments: data.total_appointments || 0,
+          patients: data.total_patients || 0,
+          pending: data.pending_appointments || 0,
+          completed: data.completed_appointments || 0,
+          records: data.total_records || 0,
         });
-
-        setRecentAppointments(appointmentsData.slice(0, 5));
+        setRecentAppointments(data.recent_appointments || []);
       })
       .catch(() => {
         if (!mounted) return;
@@ -62,14 +46,8 @@ export default function HospitalDashboard() {
     };
   }, []);
 
-  const doctorName = (doctorId) => {
-    const doctor = doctors.find((d) => d.id === doctorId);
-    if (!doctor) return `Doctor ${String(doctorId || 'N/A').slice(0, 4)}`;
-    return doctor.user_username || `Doctor ${doctor.id.slice(0, 4)}`;
-  };
-
   return (
-    <ProtectedRoute allowedRoles={['hospital']}>
+    <ProtectedRoute allowedRoles={['hospital', 'admin']}>
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-6xl mx-auto">
           <header className="flex justify-between items-center mb-10">
@@ -86,12 +64,13 @@ export default function HospitalDashboard() {
           {loading ? (
             <div className="text-center py-10 text-gray-500">Loading Metrics...</div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6 mb-10">
               <StatCard title="Total Doctors" value={stats.doctors} color="bg-blue-100 text-blue-800" />
               <StatCard title="Total Patients" value={stats.patients} color="bg-green-100 text-green-800" />
               <StatCard title="Appointments" value={stats.appointments} color="bg-yellow-100 text-yellow-800" />
               <StatCard title="Pending" value={stats.pending} color="bg-orange-100 text-orange-800" />
               <StatCard title="Completed" value={stats.completed} color="bg-emerald-100 text-emerald-800" />
+              <StatCard title="Records" value={stats.records} color="bg-indigo-100 text-indigo-800" />
             </div>
           )}
 
@@ -115,10 +94,10 @@ export default function HospitalDashboard() {
                 {recentAppointments.map((appt) => (
                   <div key={appt.id} className="border border-gray-100 rounded-lg p-3">
                     <p className="text-sm text-gray-700">
-                      <span className="font-semibold">Doctor:</span> {doctorName(appt.doctor)}
+                      <span className="font-semibold">Doctor:</span> {appt.doctor_name || 'N/A'}
                     </p>
                     <p className="text-sm text-gray-700">
-                      <span className="font-semibold">Patient ID:</span> {appt.patient}
+                      <span className="font-semibold">Patient:</span> {appt.patient_name || 'N/A'}
                     </p>
                     <p className="text-sm text-gray-700">
                       <span className="font-semibold">Date:</span> {appt.date} {appt.time ? `at ${appt.time}` : ''}

@@ -2,6 +2,7 @@ from rest_framework.test import APITestCase
 
 from hospitals.models import Hospital
 from doctors.models import Doctor
+from patients.models import Patient
 from users.models import User
 from .models import Appointment
 
@@ -12,7 +13,7 @@ class AppointmentApiTests(APITestCase):
             username="hadmin2",
             email="hadmin2@example.com",
             password="S3cretPass!123",
-            role="HOSPITAL",
+            role="ADMIN",
         )
         self.hospital = Hospital.objects.create(
             name="Test Hospital",
@@ -38,7 +39,7 @@ class AppointmentApiTests(APITestCase):
             licence_number="LIC-222",
             qualifications="MBBS",
             experience_years=3,
-            consulataion_fee="250.00",
+            consultation_fee="250.00",
         )
 
         self.patient1 = User.objects.create_user(
@@ -53,6 +54,8 @@ class AppointmentApiTests(APITestCase):
             password="S3cretPass!123",
             role="PATIENT",
         )
+        self.patient1_profile = Patient.objects.create(user=self.patient1)
+        self.patient2_profile = Patient.objects.create(user=self.patient2)
 
     def _login(self, email, password):
         resp = self.client.post(
@@ -82,10 +85,10 @@ class AppointmentApiTests(APITestCase):
 
         # Create another appointment for patient2 directly in DB
         Appointment.objects.create(
-            patient=self.patient2,
+            patient=self.patient2_profile,
             doctor=self.doctor,
             hospital=self.hospital,
-            appintment_datetime="2030-01-02T10:00:00Z",
+            appointment_datetime="2030-01-02T10:00:00Z",
             reason="Other",
             status="PENDING",
         )
@@ -93,19 +96,53 @@ class AppointmentApiTests(APITestCase):
         listed = self.client.get("/api/appointments/")
         self.assertEqual(listed.status_code, 200, listed.data)
         self.assertEqual(len(listed.data), 1)
-        self.assertEqual(str(listed.data[0]["patient"]), str(self.patient1.id))
+        self.assertEqual(str(listed.data[0]["patient"]), str(self.patient1_profile.id))
 
     def test_cancel_endpoint(self):
         self._login(self.patient1.email, "S3cretPass!123")
         appt = Appointment.objects.create(
-            patient=self.patient1,
+            patient=self.patient1_profile,
             doctor=self.doctor,
             hospital=self.hospital,
-            appintment_datetime="2030-01-03T10:00:00Z",
+            appointment_datetime="2030-01-03T10:00:00Z",
             reason="Cancel me",
             status="PENDING",
         )
 
-        resp = self.client.put(f"/api/appointments/{appt.ID}/cancel/", {}, format="json")
+        resp = self.client.put(f"/api/appointments/{appt.id}/cancel/", {}, format="json")
         self.assertEqual(resp.status_code, 200, resp.data)
         self.assertEqual(resp.data["status"], "CANCELLED")
+
+    def test_doctor_cannot_book_appointment(self):
+        self._login(self.doctor_user.email, "S3cretPass!123")
+        payload = {
+            "doctor": str(self.doctor.id),
+            "hospital": str(self.hospital.id),
+            "appointment_datetime": "2030-01-01T10:00:00Z",
+            "reason": "Should fail",
+        }
+        created = self.client.post("/api/appointments/", payload, format="json")
+        self.assertEqual(created.status_code, 403, created.data)
+
+    def test_direct_update_is_forbidden(self):
+        self._login(self.patient1.email, "S3cretPass!123")
+        appt = Appointment.objects.create(
+            patient=self.patient1_profile,
+            doctor=self.doctor,
+            hospital=self.hospital,
+            appointment_datetime="2030-01-03T10:00:00Z",
+            reason="Initial reason",
+            status="PENDING",
+        )
+
+        updated = self.client.put(
+            f"/api/appointments/{appt.id}/",
+            {
+                "doctor": str(self.doctor.id),
+                "hospital": str(self.hospital.id),
+                "appointment_datetime": "2030-01-03T11:00:00Z",
+                "reason": "Changed",
+            },
+            format="json",
+        )
+        self.assertEqual(updated.status_code, 403, updated.data)

@@ -37,9 +37,6 @@ export default function MedicalRecords() {
     setUploading(true);
     const data = new FormData();
     data.append('doctor', formData.doctor);
-    // Hardcoding patient ID if possible based on backend, usually backend derives it from request.user
-    // Usually DRF needs the patient ID if it's not automatically added. We will see if it works without passing patient.
-    // Assuming backend auto-assigns or we might need it. We'll send what we have.
     data.append('diagnosis', formData.diagnosis);
     data.append('prescription', formData.prescription);
     data.append('report_file', file);
@@ -60,7 +57,7 @@ export default function MedicalRecords() {
 
   const doctorLabel = (doctorId) => {
     const doctor = doctors.find((d) => d.id === doctorId);
-    return doctor ? `Dr. ${doctor.user_username || doctor.user?.username || doctor.id.slice(0, 4)}` : 'Unknown doctor';
+    return doctor ? `Dr. ${doctor.user_username || 'Unknown Doctor'}` : 'Unknown Doctor';
   };
 
   const filteredRecords = records.filter((rec) => {
@@ -104,9 +101,9 @@ export default function MedicalRecords() {
               <form onSubmit={handleUpload} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Select Doctor</label>
-                  <select required value={formData.doctor} onChange={e => setFormData({ ...formData, doctor: e.target.value })} className="w-full border px-3 py-2 rounded-lg">
+                  <select required value={formData.doctor} onChange={e => setFormData({ ...formData, doctor: e.target.value })} className="w-full border px-3 py-2 rounded-lg text-gray-900 bg-white">
                     <option value="">Choose Doctor...</option>
-                    {doctors.map(d => <option key={d.id} value={d.id}>Dr. {d.user?.username || d.id.substring(0, 4)}</option>)}
+                    {doctors.map(d => <option key={d.id} value={d.id}>Dr. {d.user_username || 'Unknown Doctor'}</option>)}
                   </select>
                 </div>
                 <div>
@@ -134,11 +131,11 @@ export default function MedicalRecords() {
                 <select
                   value={filters.doctor}
                   onChange={(e) => setFilters({ ...filters, doctor: e.target.value })}
-                  className="w-full border px-3 py-2 rounded-lg"
+                  className="w-full border px-3 py-2 rounded-lg text-gray-900 bg-white"
                 >
                   <option value="">All Doctors</option>
                   {doctors.map((d) => (
-                    <option key={d.id} value={d.id}>Dr. {d.user_username || d.user?.username || d.id.slice(0, 4)}</option>
+                    <option key={d.id} value={d.id}>Dr. {d.user_username || 'Unknown Doctor'}</option>
                   ))}
                 </select>
                 <input

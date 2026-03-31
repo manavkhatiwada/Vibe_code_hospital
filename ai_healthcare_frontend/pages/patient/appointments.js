@@ -40,14 +40,13 @@ export default function PatientAppointments() {
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="text-xl font-semibold text-gray-900">
-                          Dr. {appt.doctor?.user?.username || appt.doctor || 'Unknown'}
+                          Dr. {appt.doctor_name || 'Unknown Doctor'}
                         </h3>
                       </div>
-                      <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                        appt.status?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-700' :
-                        appt.status?.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
+                      <span className={`px-3 py-1 text-xs font-bold rounded-full ${appt.status?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-700' :
+                          appt.status?.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-gray-100 text-gray-700'
+                        }`}>
                         {appt.status?.toUpperCase() || 'PENDING'}
                       </span>
                     </div>

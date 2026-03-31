@@ -27,6 +27,6 @@ class DoctorSerializer(serializers.ModelSerializer):
             "licence_number",
             "qualifications",
             "experience_years",
-            "consulataion_fee",
+            "consultation_fee",
         ]
 

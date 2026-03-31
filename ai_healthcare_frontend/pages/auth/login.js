@@ -26,7 +26,7 @@ export default function Login() {
 
       if (role === 'doctor') {
         router.push('/doctor/dashboard');
-      } else if (role === 'hospital') {
+      } else if (role === 'admin' || role === 'hospital') {
         router.push('/hospital/dashboard');
       } else {
         router.push('/patient/dashboard');

@@ -102,13 +102,13 @@ export default function BookAppointment() {
                 required
                 value={formData.doctor}
                 onChange={e => setFormData({ ...formData, doctor: e.target.value })}
-                className="w-full border px-4 py-2 rounded-lg"
+                className="w-full border px-4 py-2 rounded-lg text-gray-900 bg-white"
                 disabled={loadingDoctors || submitting}
               >
                 <option value="">Select a doctor</option>
                 {doctors.map((doc) => (
                   <option key={doc.id} value={doc.id}>
-                    Dr. {doc.user_username || doc.user?.username || doc.id.slice(0, 4)} - {doc.specialization}
+                    Dr. {doc.user_username || 'Unknown Doctor'} - {doc.specialization || 'General'}
                   </option>
                 ))}
               </select>

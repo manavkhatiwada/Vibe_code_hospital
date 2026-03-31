@@ -68,10 +68,10 @@ export default function PatientHistory() {
             <select
               value={activeSelectedPatient}
               onChange={e => handleSelectPatient(e.target.value)}
-              className="w-full max-w-md border px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-200"
+              className="w-full max-w-md border px-4 py-2 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-200"
             >
               <option value="">Choose Patient...</option>
-              {patients.map(p => <option key={p.id} value={p.id}>{p.user?.username || `Patient ${p.id.substring(0, 4)}`}</option>)}
+              {patients.map(p => <option key={p.id} value={p.id}>{p.user?.username || 'Unknown Patient'}</option>)}
             </select>
           </div>
 

@@ -32,8 +32,8 @@ export default function DoctorAppointments() {
 
   const patientName = (patientId) => {
     const patient = patients.find((p) => p.id === patientId || p.user?.id === patientId);
-    if (!patient) return `Patient ${String(patientId || 'Unknown').slice(0, 4)}`;
-    return patient.user?.username || `Patient ${patient.id.slice(0, 4)}`;
+    if (!patient) return 'Unknown Patient';
+    return patient.user?.username || 'Unknown Patient';
   };
 
   return (
@@ -61,8 +61,8 @@ export default function DoctorAppointments() {
                         <h3 className="text-xl font-semibold text-gray-900">{patientName(appt.patient)}</h3>
                       </div>
                       <span className={`px-3 py-1 text-xs font-bold rounded-full ${appt.status?.toLowerCase() === 'completed' ? 'bg-green-100 text-green-700' :
-                          appt.status?.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-gray-100 text-gray-700'
+                        appt.status?.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-gray-100 text-gray-700'
                         }`}>
                         {appt.status?.toUpperCase() || 'PENDING'}
                       </span>

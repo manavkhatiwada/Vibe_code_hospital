@@ -36,7 +36,7 @@ export default function Register() {
 
       if (role === 'doctor') {
         router.push('/doctor/dashboard');
-      } else if (role === 'hospital') {
+      } else if (role === 'admin' || role === 'hospital') {
         router.push('/hospital/dashboard');
       } else {
         router.push('/patient/dashboard');
@@ -78,19 +78,8 @@ export default function Register() {
             <label className="block text-sm font-medium text-gray-700">Password</label>
             <input name="password" type="password" required value={formData.password} onChange={handleChange} className="mt-1 w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500" />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Role</label>
-            <select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className="mt-1 w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="PATIENT">Patient</option>
-              <option value="DOCTOR">Doctor</option>
-              <option value="HOSPITAL">Hospital Admin</option>
-            </select>
-          </div>
+          <input type="hidden" name="role" value="PATIENT" />
+          <p className="text-xs text-gray-500">Public sign-up creates a patient account. Doctor/admin accounts are created by admin.</p>
           <button
             type="submit"
             disabled={loading}

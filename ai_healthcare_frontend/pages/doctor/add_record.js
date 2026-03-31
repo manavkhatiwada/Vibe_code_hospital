@@ -91,14 +91,14 @@ export default function AddRecord() {
           <form onSubmit={handleUpload} className="space-y-5">
             <div>
               <label className="block text-gray-700 font-medium mb-1">Select Patient</label>
-              <select required value={formData.patient} onChange={e => setFormData({ ...formData, patient: e.target.value })} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-400">
+              <select required value={formData.patient} onChange={e => setFormData({ ...formData, patient: e.target.value })} className="w-full border px-4 py-2 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400">
                 <option value="">Choose Patient...</option>
-                {patients.map(p => <option key={p.id} value={p.id}>{p.user?.username || `Patient ${p.id.substring(0, 4)}`}</option>)}
+                {patients.map(p => <option key={p.id} value={p.id}>{p.user?.username || 'Unknown Patient'}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-gray-700 font-medium mb-1">Link Appointment (Optional)</label>
-              <select value={formData.appointment} onChange={e => setFormData({ ...formData, appointment: e.target.value })} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-400">
+              <select value={formData.appointment} onChange={e => setFormData({ ...formData, appointment: e.target.value })} className="w-full border px-4 py-2 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400">
                 <option value="">No appointment</option>
                 {patientAppointments.map((appt) => (
                   <option key={appt.id} value={appt.id}>

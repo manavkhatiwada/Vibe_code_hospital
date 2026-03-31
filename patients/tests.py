@@ -1,4 +1,5 @@
 from rest_framework.test import APITestCase
+import datetime
 
 from users.models import User
 from .models import Patient
@@ -52,12 +53,57 @@ class PatientProfileApiTests(APITestCase):
             "/api/patient/profile/",
             {
                 "gender": "female",
-                "bloood_group": "O+",
+                "blood_group": "O+",
                 "insurance_number": "INS-123",
             },
             format="json",
         )
         self.assertEqual(update.status_code, 200, update.data)
         self.assertEqual(update.data["gender"], "female")
-        self.assertEqual(update.data["bloood_group"], "O+")
+        self.assertEqual(update.data["blood_group"], "O+")
         self.assertEqual(update.data["insurance_number"], "INS-123")
+
+    def test_profile_returns_derived_age_from_date_of_birth(self):
+        password = "S3cretPass!123"
+        user = User.objects.create_user(
+            username="pat3",
+            email="pat3@example.com",
+            password=password,
+            role="PATIENT",
+        )
+
+        patient, _ = Patient.objects.get_or_create(user=user)
+        patient.date_of_birth = datetime.date(2000, 1, 1)
+        patient.save(update_fields=["date_of_birth"])
+
+        login = self.client.post(
+            "/api/login/",
+            {"email": user.email, "password": password},
+            format="json",
+        )
+        access = login.data["access"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+
+        resp = self.client.get("/api/patient/profile/")
+        self.assertEqual(resp.status_code, 200, resp.data)
+        self.assertIsNotNone(resp.data["age"])
+
+    def test_doctor_cannot_access_patient_profile_endpoint(self):
+        password = "S3cretPass!123"
+        doctor = User.objects.create_user(
+            username="doc_profile_forbidden",
+            email="doc_profile_forbidden@example.com",
+            password=password,
+            role="DOCTOR",
+        )
+
+        login = self.client.post(
+            "/api/login/",
+            {"email": doctor.email, "password": password},
+            format="json",
+        )
+        access = login.data["access"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {access}")
+
+        resp = self.client.get("/api/patient/profile/")
+        self.assertEqual(resp.status_code, 403, resp.data)

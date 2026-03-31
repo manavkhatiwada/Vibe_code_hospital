@@ -38,7 +38,7 @@ export default function DoctorList() {
                 doctors.map(doc => (
                   <div key={doc.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-lg transition">
                     <div>
-                      <h3 className="text-xl font-semibold text-gray-900">{doc.user?.username || `Dr. ${doc.id.substring(0, 4)}`}</h3>
+                      <h3 className="text-xl font-semibold text-gray-900">Dr. {doc.user_username || 'Unknown Doctor'}</h3>
                       <p className="text-blue-600 text-sm font-medium mb-2">{doc.specialization}</p>
                       <p className="text-gray-500 text-sm mb-4">Experience: {doc.experience_years} years</p>
                       <p className="text-gray-700 font-bold mb-4">Fee: ${doc.consultation_fee}</p>
