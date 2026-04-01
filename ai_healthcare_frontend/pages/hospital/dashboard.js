@@ -13,13 +13,14 @@ export default function HospitalDashboard() {
     records: 0,
   });
   const [recentAppointments, setRecentAppointments] = useState([]);
+  const [hospitalName, setHospitalName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
-    api.get('/dashboard/stats/')
-      .then((statsRes) => {
+    Promise.all([api.get('/dashboard/stats/'), api.get('/hospitals/')])
+      .then(([statsRes, hospitalsRes]) => {
         if (!mounted) return;
 
         const data = statsRes.data || {};
@@ -32,6 +33,9 @@ export default function HospitalDashboard() {
           records: data.total_records || 0,
         });
         setRecentAppointments(data.recent_appointments || []);
+
+        const hospitals = hospitalsRes.data || [];
+        setHospitalName(hospitals[0]?.name || 'Assigned Hospital');
       })
       .catch(() => {
         if (!mounted) return;
@@ -47,11 +51,14 @@ export default function HospitalDashboard() {
   }, []);
 
   return (
-    <ProtectedRoute allowedRoles={['hospital', 'admin']}>
+    <ProtectedRoute allowedRoles={['admin']} forbidSuperAdmin={true}>
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-6xl mx-auto">
           <header className="flex justify-between items-center mb-10">
-            <h1 className="text-4xl font-extrabold text-blue-900 tracking-tight">Hospital Admin Console</h1>
+            <div>
+              <h1 className="text-4xl font-extrabold text-blue-900 tracking-tight">Hospital Admin Console</h1>
+              <p className="text-sm text-gray-600 mt-2">{hospitalName}</p>
+            </div>
             <button className="text-sm font-medium text-red-600 hover:text-red-800" onClick={() => { localStorage.clear(); window.location.href = '/auth/login'; }}>Logout</button>
           </header>
 
@@ -79,6 +86,9 @@ export default function HospitalDashboard() {
             <div className="flex space-x-4">
               <Link href="/hospital/manage_doctors" className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition">
                 Manage Doctors
+              </Link>
+              <Link href="/hospital/appointments" className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow hover:bg-indigo-700 transition">
+                Manage Appointments
               </Link>
             </div>
           </div>

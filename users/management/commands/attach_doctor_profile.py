@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.core.management.base import BaseCommand, CommandError
 
-from doctors.models import Doctor
+from doctors.models import Doctor, DoctorHospitalMembership
 from hospitals.models import Hospital
 from users.models import User
 
@@ -38,7 +38,7 @@ class Command(BaseCommand):
         except Hospital.DoesNotExist as exc:
             raise CommandError("Hospital not found") from exc
 
-        Doctor.objects.create(
+        doctor = Doctor.objects.create(
             user=user,
             hospital=hospital,
             specialization=options["specialization"],
@@ -46,6 +46,11 @@ class Command(BaseCommand):
             qualifications=options["qualifications"],
             experience_years=options["experience_years"],
             consultation_fee=Decimal(str(options["consultation_fee"])),
+        )
+        DoctorHospitalMembership.objects.get_or_create(
+            doctor=doctor,
+            hospital=hospital,
+            defaults={"is_active": True},
         )
 
         self.stdout.write(self.style.SUCCESS(f"Doctor profile attached for {email}"))

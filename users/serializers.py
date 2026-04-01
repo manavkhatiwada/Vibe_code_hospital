@@ -1,15 +1,19 @@
 from rest_framework import serializers
 
-from doctors.models import Doctor
+from doctors.models import Doctor, DoctorHospitalMembership
 from hospitals.models import Hospital
 from patients.models import Patient
 
 from .models import User
+from .permissions import is_super_admin_user
 
 class ProfileSerializer(serializers.ModelSerializer):
+    is_superuser = serializers.BooleanField(read_only=True)
+    is_staff = serializers.BooleanField(read_only=True)
+    
     class Meta:
         model = User
-        fields = ["id", "email", "username", "role", "phone_number", "is_verified"]
+        fields = ["id", "email", "username", "role", "phone_number", "is_verified", "is_superuser", "is_staff"]
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -71,7 +75,39 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        request = self.context.get("request")
+        creator = getattr(request, "user", None)
         role = attrs.get("role")
+
+        creator_is_super_admin = is_super_admin_user(creator)
+        creator_is_hospital_admin = bool(
+            creator
+            and getattr(creator, "is_authenticated", False)
+            and getattr(creator, "role", None) == "ADMIN"
+            and not creator_is_super_admin
+        )
+
+        if not creator_is_super_admin and role == "ADMIN":
+            raise serializers.ValidationError(
+                {"role": "Only super admins can create hospital admin accounts."}
+            )
+
+        if creator_is_hospital_admin and role == "DOCTOR" and not attrs.get("hospital_id"):
+            owned_hospital = Hospital.objects.filter(admin=creator).first()
+            if not owned_hospital:
+                raise serializers.ValidationError(
+                    {"hospital_id": "You do not manage any hospital. Super admin must assign one first."}
+                )
+            attrs["hospital_id"] = owned_hospital.id
+
+        if creator_is_hospital_admin and role == "DOCTOR":
+            hospital_id = attrs.get("hospital_id")
+            owns_hospital = Hospital.objects.filter(id=hospital_id, admin=creator).exists()
+            if not owns_hospital:
+                raise serializers.ValidationError(
+                    {"hospital_id": "Hospital admins can only add doctors to their own hospital."}
+                )
+
         if role == "DOCTOR":
             required = [
                 "hospital_id",
@@ -109,7 +145,7 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
             except Hospital.DoesNotExist as exc:
                 raise serializers.ValidationError({"hospital_id": "Hospital not found."}) from exc
 
-            Doctor.objects.create(
+            doctor = Doctor.objects.create(
                 user=user,
                 hospital=hospital,
                 specialization=specialization,
@@ -117,6 +153,11 @@ class AdminUserCreateSerializer(serializers.ModelSerializer):
                 qualifications=qualifications,
                 experience_years=experience_years,
                 consultation_fee=consultation_fee,
+            )
+            DoctorHospitalMembership.objects.get_or_create(
+                doctor=doctor,
+                hospital=hospital,
+                defaults={"linked_by": self.context.get("request").user if self.context.get("request") else None},
             )
 
         return user

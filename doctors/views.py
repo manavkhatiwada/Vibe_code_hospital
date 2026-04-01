@@ -1,6 +1,7 @@
 from rest_framework import permissions
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.viewsets import ModelViewSet
+from django.db.models import Q
 
 from .models import Doctor
 from .serializers import DoctorSerializer
@@ -20,7 +21,10 @@ class DoctorViewSet(ModelViewSet):
         # Admin users can only manage doctors in their own hospital.
         if role == "ADMIN":
             hospitals = Hospital.objects.filter(admin=user)
-            return qs.filter(hospital__in=hospitals)
+            return qs.filter(
+                Q(hospital__in=hospitals)
+                | Q(hospital_memberships__hospital__in=hospitals, hospital_memberships__is_active=True)
+            ).distinct()
 
         # Doctors can view only themselves.
         if role == "DOCTOR" and hasattr(user, "doctor"):

@@ -1,5 +1,6 @@
 from rest_framework import permissions, viewsets
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from django.db.models import Q
 
 from appointments.models import Appointment
 from doctors.models import Doctor
@@ -55,7 +56,10 @@ class MedicalRecordViewSet(viewsets.ModelViewSet):
                 hospitals = Hospital.objects.filter(admin=user)
                 return MedicalRecord.objects.select_related(
                     "patient", "patient__user", "doctor", "doctor__user", "appointment"
-                ).filter(doctor__hospital__in=hospitals)
+                ).filter(
+                    Q(doctor__hospital__in=hospitals)
+                    | Q(doctor__hospital_memberships__hospital__in=hospitals, doctor__hospital_memberships__is_active=True)
+                ).distinct()
         except Exception:
             pass
 

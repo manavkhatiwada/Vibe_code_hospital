@@ -22,7 +22,7 @@ class AdminUserCreateView(APIView):
     permission_classes = [IsAuthenticated, IsAdminRole]
 
     def post(self, request):
-        serializer = AdminUserCreateSerializer(data=request.data)
+        serializer = AdminUserCreateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -35,6 +35,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
         data['role'] = self.user.role
         data['username'] = self.user.username
+        data['is_superuser'] = self.user.is_superuser
         return data
 
     @classmethod
@@ -42,6 +43,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
         token['role'] = user.role
         token['username'] = user.username
+        token['is_superuser'] = user.is_superuser
         return token
 
 class LoginView(TokenObtainPairView):

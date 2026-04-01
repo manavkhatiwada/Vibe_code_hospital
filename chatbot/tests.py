@@ -51,3 +51,39 @@ class ChatbotApiTests(APITestCase):
 		)
 		self.assertEqual(history.status_code, 200, history.data)
 		self.assertEqual(len(history.data), 2)
+
+	def test_doctor_cannot_access_chatbot_endpoints(self):
+		doctor = User.objects.create_user(
+			username="chatdoctor",
+			email="chatdoctor@example.com",
+			password=self.password,
+			role="DOCTOR",
+		)
+		login = self.client.post(
+			"/api/login/",
+			{"email": doctor.email, "password": self.password},
+			format="json",
+		)
+		self.assertEqual(login.status_code, 200, login.data)
+		self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
+
+		response = self.client.get("/api/chatbot/conversations/")
+		self.assertEqual(response.status_code, 403)
+
+	def test_admin_cannot_access_chatbot_endpoints(self):
+		admin = User.objects.create_user(
+			username="chatadmin",
+			email="chatadmin@example.com",
+			password=self.password,
+			role="ADMIN",
+		)
+		login = self.client.post(
+			"/api/login/",
+			{"email": admin.email, "password": self.password},
+			format="json",
+		)
+		self.assertEqual(login.status_code, 200, login.data)
+		self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
+
+		response = self.client.post("/api/chatbot/conversations/", {}, format="json")
+		self.assertEqual(response.status_code, 403)

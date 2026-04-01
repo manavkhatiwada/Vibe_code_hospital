@@ -9,10 +9,11 @@ from .serializers import (
 	ChatMessageSerializer,
 	CreateChatMessageSerializer,
 )
+from users.permissions import IsPatientRole
 
 
 class ChatConversationListCreateView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [IsAuthenticated, IsPatientRole]
 
 	def get(self, request):
 		conversations = ChatConversation.objects.filter(user=request.user)
@@ -26,7 +27,7 @@ class ChatConversationListCreateView(APIView):
 
 
 class ChatConversationMessageListCreateView(APIView):
-	permission_classes = [IsAuthenticated]
+	permission_classes = [IsAuthenticated, IsPatientRole]
 
 	def get(self, request, conversation_id):
 		conversation = ChatConversation.objects.filter(

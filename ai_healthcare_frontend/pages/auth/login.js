@@ -23,10 +23,15 @@ export default function Login() {
 
       const decoded = jwtDecode(token);
       const role = (decoded.role || data.role || 'patient').toLowerCase();
+      const isSuper = decoded.is_superuser || data.is_superuser || false;
 
-      if (role === 'doctor') {
+      if (role === 'admin' && isSuper) {
+        // Super-admin
+        router.push('/admin/dashboard');
+      } else if (role === 'doctor') {
         router.push('/doctor/dashboard');
-      } else if (role === 'admin' || role === 'hospital') {
+      } else if (role === 'admin') {
+        // Hospital-admin
         router.push('/hospital/dashboard');
       } else {
         router.push('/patient/dashboard');

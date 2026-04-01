@@ -1,6 +1,7 @@
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.db.models import Q
 
 from appointments.models import Appointment
 from doctors.models import Doctor
@@ -18,9 +19,18 @@ class DashboardStatsView(APIView):
 
         if role == "ADMIN":
             hospitals = Hospital.objects.filter(admin=user)
-            doctors_qs = Doctor.objects.filter(hospital__in=hospitals)
-            appointments_qs = Appointment.objects.filter(hospital__in=hospitals)
-            records_qs = MedicalRecord.objects.filter(doctor__hospital__in=hospitals)
+            doctors_qs = Doctor.objects.filter(
+                Q(hospital__in=hospitals)
+                | Q(hospital_memberships__hospital__in=hospitals, hospital_memberships__is_active=True)
+            ).distinct()
+            appointments_qs = Appointment.objects.filter(
+                Q(hospital__in=hospitals)
+                | Q(doctor__hospital_memberships__hospital__in=hospitals, doctor__hospital_memberships__is_active=True)
+            ).distinct()
+            records_qs = MedicalRecord.objects.filter(
+                Q(doctor__hospital__in=hospitals)
+                | Q(doctor__hospital_memberships__hospital__in=hospitals, doctor__hospital_memberships__is_active=True)
+            ).distinct()
 
             unique_patient_ids = set(
                 appointments_qs.values_list("patient_id", flat=True)
