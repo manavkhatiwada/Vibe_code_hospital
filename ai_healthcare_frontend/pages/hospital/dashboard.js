@@ -39,7 +39,7 @@ export default function HospitalDashboard() {
       })
       .catch(() => {
         if (!mounted) return;
-        setError('Failed to load hospital metrics. Please refresh.');
+        setError('Failed to load hospital metrics. Please refresh or check your hospital-admin access.');
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -91,6 +91,9 @@ export default function HospitalDashboard() {
                 Manage Appointments
               </Link>
             </div>
+            <p className="mt-3 text-sm text-gray-500">
+              Use <span className="font-medium">Manage Doctors</span> to create doctor accounts, link existing doctors, or unlink staff from this hospital.
+            </p>
           </div>
 
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mt-8">
