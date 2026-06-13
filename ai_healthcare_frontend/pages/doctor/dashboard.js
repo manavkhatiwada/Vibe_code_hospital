@@ -62,7 +62,7 @@ export default function DoctorDashboard() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <DashboardCard title="My Appointments" desc="View your schedule and patients" link="/doctor/appointments" icon="📅" />
-            <DashboardCard title="Add Medical Record" desc="Add diagnosis and prescriptions" link="/doctor/add_record" icon="📝" />
+            <DashboardCard title="Add Medical Record" desc="Add notes and reports" link="/doctor/add_record" icon="📝" />
             <DashboardCard title="Patient History" desc="View previous records of patients" link="/doctor/patient_history" icon="🏥" />
           </div>
         </div>

@@ -119,12 +119,15 @@ export default function PatientHistory() {
                     {filteredRecords.map(rec => (
                       <div key={rec.id} className="border border-gray-100 rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-bold text-gray-900">{rec.diagnosis}</h4>
-                          <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                            {new Date(rec.created_at).toLocaleDateString()}
+                          <div>
+                            <h4 className="font-bold text-gray-900">{rec.folder_name || 'General'}</h4>
+                            <span className="text-xs text-gray-500">{new Date(rec.created_at).toLocaleDateString()}</span>
+                          </div>
+                          <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded-full">
+                            Folder
                           </span>
                         </div>
-                        <p className="text-sm text-gray-700"><span className="font-semibold">Prescription:</span> {rec.prescription || 'N/A'}</p>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap"><span className="font-semibold">Notes:</span> {rec.notes || 'N/A'}</p>
                         {rec.report_file && (
                           <a href={rec.report_file} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-blue-600 hover:underline inline-flex mt-2">
                             View Attached Report

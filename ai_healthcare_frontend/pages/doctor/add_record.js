@@ -12,12 +12,16 @@ export default function AddRecord() {
   const [formData, setFormData] = useState({
     patient: '',
     appointment: '',
-    diagnosis: '',
-    prescription: '',
+    notes: '',
+    folderName: 'General',
+    isPrivate: true,
   });
+  const [folderMode, setFolderMode] = useState('preset');
+  const [customFolderName, setCustomFolderName] = useState('');
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState('');
+  const reportFolders = ['General', 'Blood Report', 'Kidney Report', 'Lab Report', 'Imaging Report'];
 
   useEffect(() => {
     let mounted = true;
@@ -49,8 +53,13 @@ export default function AddRecord() {
   const handleUpload = async (e) => {
     e.preventDefault();
     setStatus('');
-    if (!formData.patient || !formData.diagnosis) {
-      setStatus('Patient and diagnosis are required.');
+    const resolvedFolderName = folderMode === 'custom' ? customFolderName.trim() : formData.folderName;
+    if (!formData.patient || !formData.notes) {
+      setStatus('Patient and notes are required.');
+      return;
+    }
+    if (folderMode === 'custom' && !resolvedFolderName) {
+      setStatus('Please provide a folder name.');
       return;
     }
 
@@ -58,8 +67,9 @@ export default function AddRecord() {
     const data = new FormData();
     data.append('patient', formData.patient);
     if (formData.appointment) data.append('appointment', formData.appointment);
-    data.append('diagnosis', formData.diagnosis);
-    data.append('prescription', formData.prescription);
+    data.append('notes', formData.notes);
+    data.append('folder_name', resolvedFolderName);
+    data.append('is_private', formData.isPrivate ? 'true' : 'false');
     if (file) data.append('report_file', file);
 
     try {
@@ -108,12 +118,57 @@ export default function AddRecord() {
               </select>
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-1">Diagnosis</label>
-              <input type="text" required value={formData.diagnosis} onChange={e => setFormData({ ...formData, diagnosis: e.target.value })} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-400" placeholder="e.g. Viral Fever" />
+              <label className="block text-gray-700 font-medium mb-1">Report Folder</label>
+              <select
+                value={folderMode}
+                onChange={(e) => setFolderMode(e.target.value)}
+                className="w-full border px-4 py-2 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
+              >
+                <option value="preset">Choose Existing Folder</option>
+                <option value="custom">Create New Folder</option>
+              </select>
+              {folderMode === 'preset' ? (
+                <select
+                  value={formData.folderName}
+                  onChange={(e) => setFormData({ ...formData, folderName: e.target.value })}
+                  className="w-full border px-4 py-2 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400 mt-2"
+                >
+                  {reportFolders.map((folder) => (
+                    <option key={folder} value={folder}>{folder}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={customFolderName}
+                  onChange={(e) => setCustomFolderName(e.target.value)}
+                  className="w-full border px-4 py-2 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400 mt-2"
+                  placeholder="e.g. Blood Report"
+                />
+              )}
             </div>
             <div>
-              <label className="block text-gray-700 font-medium mb-1">Prescription Notes</label>
-              <textarea rows="3" value={formData.prescription} onChange={e => setFormData({ ...formData, prescription: e.target.value })} className="w-full border px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-400" placeholder="Medications, rest details..."></textarea>
+              <label className="block text-gray-700 font-medium mb-1">Notes</label>
+              <textarea
+                rows="3"
+                required
+                value={formData.notes}
+                onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                className="w-full border px-4 py-2 rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-400 placeholder:text-gray-400"
+                placeholder="Add report notes"
+              ></textarea>
+            </div>
+            <div className="border-t pt-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.isPrivate}
+                  onChange={e => setFormData({ ...formData, isPrivate: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                <span className="text-sm font-medium text-gray-700">Keep reports private (only visible to patient)</span>
+              </label>
+              <p className="text-xs text-gray-500 mt-2">📋 When checked, only the patient can see these reports. You can request access later.</p>
             </div>
             <div>
               <label className="block text-gray-700 font-medium mb-1">Attach Final Report (Optional)</label>

@@ -69,6 +69,7 @@ class MedicalRecordViewSet(viewsets.ModelViewSet):
         user = self.request.user
         role = getattr(user, "role", None)
         appointment_id = self.request.data.get("appointment")
+        doctor_id = self.request.data.get("doctor")
 
         def _get_appointment_or_none():
             if not appointment_id:
@@ -78,24 +79,22 @@ class MedicalRecordViewSet(viewsets.ModelViewSet):
             except Appointment.DoesNotExist as exc:
                 raise ValidationError({"appointment": "Appointment not found."}) from exc
 
-        # Patient creates a record: backend assigns `patient` from request.user
-        # and requires `doctor` from the payload.
+        # Patient creates a record: backend assigns `patient` from request.user.
+        # Doctor is optional so private uploads do not require sharing on create.
         if role == "PATIENT":
             patient_profile = self._get_patient_profile(user)
-            doctor_id = self.request.data.get("doctor")
-            if not doctor_id:
-                raise ValidationError({"doctor": "Doctor is required to upload a medical record."})
-
-            try:
-                doctor = Doctor.objects.get(pk=doctor_id)
-            except Doctor.DoesNotExist as exc:
-                raise ValidationError({"doctor": "Doctor not found."}) from exc
+            doctor = None
+            if doctor_id:
+                try:
+                    doctor = Doctor.objects.get(pk=doctor_id)
+                except Doctor.DoesNotExist as exc:
+                    raise ValidationError({"doctor": "Doctor not found."}) from exc
 
             appointment = _get_appointment_or_none()
             if appointment:
                 if appointment.patient_id != patient_profile.id:
                     raise PermissionDenied("You can only link your own appointments.")
-                if appointment.doctor_id != doctor.id:
+                if doctor and appointment.doctor_id != doctor.id:
                     raise ValidationError({"appointment": "Appointment doctor does not match selected doctor."})
 
             serializer.save(patient=patient_profile, doctor=doctor, appointment=appointment)

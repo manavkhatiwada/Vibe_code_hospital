@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APITestCase
 from rest_framework import status
 
@@ -73,8 +74,9 @@ class MedicalRecordApiTests(APITestCase):
 
         payload = {
             "doctor": str(self.doctor.id),
-            "diagnosis": "Flu",
-            "prescription": "Rest and fluids",
+            "notes": "Flu symptoms and rest advised",
+            "folder_name": "Blood Report",
+            "is_private": True,
         }
         resp = self.client.post("/api/records/", payload, format="json")
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
@@ -83,10 +85,30 @@ class MedicalRecordApiTests(APITestCase):
         patient_profile = Patient.objects.get(user=self.patient_user)
         self.assertEqual(record.patient_id, patient_profile.id)
         self.assertEqual(record.doctor_id, self.doctor.id)
+        self.assertEqual(record.notes, "Flu symptoms and rest advised")
+        self.assertEqual(record.folder_name, "Blood Report")
+        self.assertTrue(record.is_private)
 
         list_resp = self.client.get("/api/records/")
         self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
         self.assertEqual(len(list_resp.data), 1)
+
+    def test_patient_can_create_private_record_without_doctor(self):
+        self._login(self.client, self.patient_user.email, "S3cretPass!123")
+
+        payload = {
+            "notes": "Private notes only",
+            "folder_name": "General",
+            "is_private": True,
+        }
+        resp = self.client.post("/api/records/", payload, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+
+        record = MedicalRecord.objects.get(id=resp.data["id"])
+        self.assertIsNone(record.doctor)
+        self.assertEqual(record.notes, "Private notes only")
+        self.assertEqual(record.folder_name, "General")
+        self.assertTrue(record.is_private)
 
     def test_doctor_can_create_and_list_record(self):
         self._login(self.client, self.doctor_user.email, "S3cretPass!123")
@@ -94,8 +116,9 @@ class MedicalRecordApiTests(APITestCase):
 
         payload = {
             "patient": str(patient_profile.id),
-            "diagnosis": "Allergy",
-            "prescription": "Antihistamines",
+            "notes": "Allergy symptoms observed",
+            "folder_name": "Kidney Report",
+            "is_private": False,
         }
         resp = self.client.post("/api/records/", payload, format="json")
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
@@ -103,6 +126,9 @@ class MedicalRecordApiTests(APITestCase):
         record = MedicalRecord.objects.get(id=resp.data["id"])
         self.assertEqual(record.doctor_id, self.doctor.id)
         self.assertEqual(record.patient_id, patient_profile.id)
+        self.assertEqual(record.notes, "Allergy symptoms observed")
+        self.assertEqual(record.folder_name, "Kidney Report")
+        self.assertFalse(record.is_private)
 
         list_resp = self.client.get("/api/records/")
         self.assertEqual(list_resp.status_code, status.HTTP_200_OK)
@@ -120,8 +146,7 @@ class MedicalRecordApiTests(APITestCase):
         self._login(self.client, self.doctor_user.email, "S3cretPass!123")
         payload = {
             "patient": str(other_patient_profile.id),
-            "diagnosis": "Migraine",
-            "prescription": "Hydration",
+            "notes": "Migraine record",
         }
         resp = self.client.post("/api/records/", payload, format="json")
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN, resp.data)
@@ -147,8 +172,36 @@ class MedicalRecordApiTests(APITestCase):
         payload = {
             "doctor": str(self.doctor.id),
             "appointment": str(other_appointment.id),
-            "diagnosis": "Flu",
-            "prescription": "Rest",
+            "notes": "Flu record",
         }
         resp = self.client.post("/api/records/", payload, format="json")
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN, resp.data)
+
+    def test_patient_upload_saves_report_under_selected_folder(self):
+        self._login(self.client, self.patient_user.email, "S3cretPass!123")
+
+        payload = {
+            "doctor": str(self.doctor.id),
+            "notes": "Blood work attached",
+            "folder_name": "Blood Report",
+            "report_file": SimpleUploadedFile("lab-report.pdf", b"pdf-bytes", content_type="application/pdf"),
+        }
+        resp = self.client.post("/api/records/", payload, format="multipart")
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+
+        record = MedicalRecord.objects.get(id=resp.data["id"])
+        self.assertIn("medical_reports/blood-report/", record.report_file.name)
+
+    def test_records_are_private_by_default(self):
+        self._login(self.client, self.patient_user.email, "S3cretPass!123")
+
+        payload = {
+            "doctor": str(self.doctor.id),
+            "notes": "Default privacy test",
+            "folder_name": "General",
+        }
+        resp = self.client.post("/api/records/", payload, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+
+        record = MedicalRecord.objects.get(id=resp.data["id"])
+        self.assertTrue(record.is_private, "Records should be private by default")
