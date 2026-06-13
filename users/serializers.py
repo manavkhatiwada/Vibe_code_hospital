@@ -42,6 +42,46 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
+class DoctorRegisterSerializer(serializers.ModelSerializer):
+    specialization = serializers.CharField(required=False, allow_blank=True, default="General")
+    licence_number = serializers.CharField()
+    qualifications = serializers.CharField()
+    experience_years = serializers.IntegerField()
+    consultation_fee = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        model = User
+        fields = ["id", "email", "username", "password", "specialization", "licence_number", "qualifications", "experience_years", "consultation_fee"]
+        extra_kwargs = {"password": {"write_only": True}}
+
+    def create(self, validated_data):
+        specialization = validated_data.pop("specialization", "General")
+        licence_number = validated_data.pop("licence_number")
+        qualifications = validated_data.pop("qualifications")
+        experience_years = validated_data.pop("experience_years")
+        consultation_fee = validated_data.pop("consultation_fee")
+
+        user = User.objects.create_user(
+            username=validated_data["username"],
+            email=validated_data["email"],
+            password=validated_data["password"],
+            role="DOCTOR",
+        )
+
+        from doctors.models import Doctor
+        Doctor.objects.create(
+            user=user,
+            hospital=None,
+            specialization=specialization,
+            licence_number=licence_number,
+            qualifications=qualifications,
+            experience_years=experience_years,
+            consultation_fee=consultation_fee,
+        )
+
+        return user
+
+
 class AdminUserCreateSerializer(serializers.ModelSerializer):
     # Required only when creating a doctor account.
     hospital_id = serializers.UUIDField(required=False, write_only=True)

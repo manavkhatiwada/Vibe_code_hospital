@@ -7,7 +7,7 @@ from hospitals.models import Hospital
 class Doctor(models.Model):
     id = models.UUIDField(primary_key=True,default=uuid.uuid4,editable=False)
     user = models.OneToOneField(settings.AUTH_USER_MODEL,on_delete=models.CASCADE)
-    hospital = models.ForeignKey(Hospital,on_delete=models.CASCADE)
+    hospital = models.ForeignKey(Hospital, on_delete=models.SET_NULL, null=True, blank=True)
     hospitals = models.ManyToManyField(
         Hospital,
         through="DoctorHospitalMembership",

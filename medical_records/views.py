@@ -1,5 +1,7 @@
 from rest_framework import permissions, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.response import Response
 from django.db.models import Q
 
 from appointments.models import Appointment
@@ -31,12 +33,14 @@ class MedicalRecordViewSet(viewsets.ModelViewSet):
 
         role = getattr(user, "role", None)
 
-        # Doctor users: list by their Doctor profile.
+        # Doctor users: records explicitly assigned to them (non-private) OR shared with them.
         try:
             if role == "DOCTOR" and hasattr(user, "doctor"):
                 return MedicalRecord.objects.select_related(
                     "patient", "patient__user", "doctor", "doctor__user", "appointment"
-                ).filter(doctor=user.doctor)
+                ).filter(
+                    Q(doctor=user.doctor, is_private=False) | Q(shared_with=user.doctor)
+                ).distinct()
         except Exception:
             pass
 
@@ -134,7 +138,33 @@ class MedicalRecordViewSet(viewsets.ModelViewSet):
                         "You can only create records for patients assigned to you via appointment or existing record."
                     )
 
-            serializer.save(patient=patient_profile, doctor=user.doctor, appointment=appointment)
+            # Doctor-created records are always non-private so the doctor can see them.
+            serializer.save(patient=patient_profile, doctor=user.doctor, appointment=appointment, is_private=False)
             return
 
         raise PermissionDenied("Only patients and doctors can create medical records.")
+
+    @action(detail=True, methods=["post"], url_path="share")
+    def share(self, request, pk=None):
+        """Patient shares a private record with a specific doctor."""
+        record = self.get_object()
+        user = request.user
+
+        if getattr(user, "role", None) != "PATIENT":
+            raise PermissionDenied("Only patients can share records.")
+
+        patient_profile, _ = Patient.objects.get_or_create(user=user)
+        if record.patient_id != patient_profile.id:
+            raise PermissionDenied("You can only share your own records.")
+
+        doctor_id = request.data.get("doctor_id")
+        if not doctor_id:
+            raise ValidationError({"doctor_id": "This field is required."})
+
+        try:
+            doctor = Doctor.objects.get(pk=doctor_id)
+        except Doctor.DoesNotExist:
+            raise ValidationError({"doctor_id": "Doctor not found."})
+
+        record.shared_with.add(doctor)
+        return Response({"status": "shared", "doctor_id": str(doctor.id)})

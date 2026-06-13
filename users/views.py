@@ -1,6 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .serializers import AdminUserCreateSerializer, ProfileSerializer, RegisterSerializer
+from .serializers import AdminUserCreateSerializer, DoctorRegisterSerializer, ProfileSerializer, RegisterSerializer
 from rest_framework import status
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -11,7 +11,11 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
+        role = request.data.get("role", "PATIENT")
+        if role == "DOCTOR":
+            serializer = DoctorRegisterSerializer(data=request.data)
+        else:
+            serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

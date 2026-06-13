@@ -7,7 +7,10 @@ import { jwtDecode } from 'jwt-decode';
 export default function Register() {
   const router = useRouter();
   const [selectedRole, setSelectedRole] = useState('PATIENT');
-  const [formData, setFormData] = useState({ username: '', email: '', password: '', role: 'PATIENT' });
+  const [formData, setFormData] = useState({
+    username: '', email: '', password: '',
+    specialization: '', licence_number: '', qualifications: '', experience_years: '', consultation_fee: '',
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -24,7 +27,10 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await api.post('/register/', { ...formData, role: 'PATIENT' });
+      const payload = selectedRole === 'DOCTOR'
+        ? { ...formData, role: 'DOCTOR' }
+        : { username: formData.username, email: formData.email, password: formData.password, role: 'PATIENT' };
+      await api.post('/register/', payload);
 
       // Auto-login after successful registration for smoother onboarding.
       const { data } = await api.post('/login/', {
@@ -38,7 +44,7 @@ export default function Register() {
       localStorage.setItem('token', token);
 
       const decoded = jwtDecode(token);
-      const role = (decoded.role || data.role || formData.role).toLowerCase();
+      const role = (decoded.role || data.role || selectedRole).toLowerCase();
 
       if (role === 'doctor') {
         router.push('/doctor/dashboard');
@@ -97,45 +103,64 @@ export default function Register() {
           </button>
         </div>
 
-        {selectedRole === 'DOCTOR' ? (
-          <div className="rounded-lg bg-blue-50 border border-blue-200 p-5 text-center space-y-2">
-            <p className="text-blue-800 font-semibold text-sm">Doctor accounts are created by your hospital admin.</p>
-            <p className="text-blue-700 text-xs">
-              Ask your hospital administrator to add you to Open Care. Once created, you can log in directly.
-            </p>
-            <Link href="/auth/login" className="inline-block mt-2 text-blue-600 text-sm font-medium hover:underline">
-              Already have an account? Login here
-            </Link>
+        {error && <p className="text-red-500 text-sm mb-4 text-center">{error}</p>}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Username</label>
+            <input name="username" type="text" required value={formData.username} onChange={handleChange} className="mt-1 w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500" />
           </div>
-        ) : (
-          <>
-            {error && <p className="text-red-500 text-sm mb-4 text-center">{error}</p>}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Username</label>
-                <input name="username" type="text" required value={formData.username} onChange={handleChange} className="mt-1 w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500" />
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Email</label>
+            <input name="email" type="email" required value={formData.email} onChange={handleChange} className="mt-1 w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Password</label>
+            <input name="password" type="password" required value={formData.password} onChange={handleChange} className="mt-1 w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+
+          {selectedRole === 'DOCTOR' && (
+            <>
+              <div className="border-t pt-4">
+                <p className="text-xs text-gray-500 mb-3 font-medium uppercase tracking-wide">Professional Details</p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Specialization</label>
+                    <input name="specialization" type="text" value={formData.specialization} onChange={handleChange} placeholder="e.g. Cardiology" className="mt-1 w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Licence Number</label>
+                    <input name="licence_number" type="text" required value={formData.licence_number} onChange={handleChange} className="mt-1 w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Qualifications</label>
+                    <input name="qualifications" type="text" required value={formData.qualifications} onChange={handleChange} placeholder="e.g. MBBS, MD" className="mt-1 w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Experience (years)</label>
+                      <input name="experience_years" type="number" min="0" required value={formData.experience_years} onChange={handleChange} className="mt-1 w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Consultation Fee ($)</label>
+                      <input name="consultation_fee" type="number" min="0" step="0.01" required value={formData.consultation_fee} onChange={handleChange} className="mt-1 w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500" />
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
-                <input name="email" type="email" required value={formData.email} onChange={handleChange} className="mt-1 w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Password</label>
-                <input name="password" type="password" required value={formData.password} onChange={handleChange} className="mt-1 w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500" />
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-150"
-              >
-                {loading ? 'Creating account...' : 'Register'}
-              </button>
-            </form>
-            <p className="mt-6 text-center text-sm text-gray-600">
-              Already have an account? <Link href="/auth/login" className="text-blue-600 font-medium hover:underline">Login here</Link>
-            </p>
-          </>
-        )}
+            </>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-150"
+          >
+            {loading ? 'Creating account...' : 'Register'}
+          </button>
+        </form>
+        <p className="mt-6 text-center text-sm text-gray-600">
+          Already have an account? <Link href="/auth/login" className="text-blue-600 font-medium hover:underline">Login here</Link>
+        </p>
       </div>
     </div>
   );

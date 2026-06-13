@@ -15,6 +15,10 @@ export default function MedicalRecords() {
   const [doctorsError, setDoctorsError] = useState(null);
   const [filters, setFilters] = useState({ doctor: '', dateFrom: '', dateTo: '' });
   const [selectedFolder, setSelectedFolder] = useState('All Records');
+  const [shareModal, setShareModal] = useState({ open: false, recordId: null });
+  const [shareDoctor, setShareDoctor] = useState('');
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareError, setShareError] = useState('');
   const reportFolders = ['General', 'Blood Report', 'Kidney Report', 'Lab Report', 'Imaging Report'];
 
   useEffect(() => {
@@ -73,6 +77,33 @@ export default function MedicalRecords() {
       alert('Upload failed: ' + (err.response?.data?.detail || 'Verify your inputs.'));
     } finally {
       setUploading(false);
+    }
+  };
+
+  const openShareModal = (recordId) => {
+    setShareModal({ open: true, recordId });
+    setShareDoctor('');
+    setShareError('');
+  };
+
+  const closeShareModal = () => {
+    setShareModal({ open: false, recordId: null });
+    setShareDoctor('');
+    setShareError('');
+  };
+
+  const handleShare = async () => {
+    if (!shareDoctor) { setShareError('Please select a doctor.'); return; }
+    setShareLoading(true);
+    setShareError('');
+    try {
+      await api.post(`/records/${shareModal.recordId}/share/`, { doctor_id: shareDoctor });
+      await fetchData();
+      closeShareModal();
+    } catch (err) {
+      setShareError(err.response?.data?.doctor_id || err.response?.data?.detail || 'Failed to share. Try again.');
+    } finally {
+      setShareLoading(false);
     }
   };
 
@@ -266,14 +297,30 @@ export default function MedicalRecords() {
                         </div>
                         <p className="text-sm text-gray-600 mb-2 whitespace-pre-wrap"><span className="font-medium">Notes:</span> {rec.notes || 'N/A'}</p>
                         <p className="text-sm text-gray-600 mb-1"><span className="font-medium">Doctor:</span> {doctorLabel(rec.doctor)}</p>
-                        <p className="text-sm text-gray-600 mb-1"><span className="font-medium">Access:</span> {rec.is_private ? 'Private to you' : 'Shared'}</p>
+                        <p className="text-sm text-gray-600 mb-1">
+                          <span className="font-medium">Access:</span>{' '}
+                          {rec.is_private
+                            ? rec.shared_with && rec.shared_with.length > 0
+                              ? `Private — shared with ${rec.shared_with.length} doctor${rec.shared_with.length > 1 ? 's' : ''}`
+                              : 'Private to you'
+                            : 'Shared with doctor'}
+                        </p>
                         <p className="text-xs text-gray-400">Date: {new Date(rec.created_at).toLocaleDateString()}</p>
                       </div>
-                      {rec.report_file && (
-                        <a href={rec.report_file} target="_blank" rel="noopener noreferrer" className="bg-gray-100 text-blue-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 transition">
-                          View File
-                        </a>
-                      )}
+                      <div className="flex flex-col gap-2 items-end">
+                        {rec.report_file && (
+                          <a href={rec.report_file} target="_blank" rel="noopener noreferrer" className="bg-gray-100 text-blue-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 transition whitespace-nowrap">
+                            View File
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => openShareModal(rec.id)}
+                          className="bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-100 transition whitespace-nowrap"
+                        >
+                          Share
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -282,6 +329,43 @@ export default function MedicalRecords() {
           </div>
         </div>
       </div>
+      {/* Share Modal */}
+      {shareModal.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <h3 className="text-lg font-bold text-gray-800 mb-1">Share Record</h3>
+            <p className="text-sm text-gray-500 mb-4">Select a doctor to grant access to this private record.</p>
+            {shareError && <p className="text-red-500 text-sm mb-3">{shareError}</p>}
+            <select
+              value={shareDoctor}
+              onChange={e => setShareDoctor(e.target.value)}
+              className="w-full border px-3 py-2 rounded-lg text-gray-900 bg-white mb-4"
+            >
+              <option value="">Choose Doctor...</option>
+              {doctors.map(d => (
+                <option key={d.id} value={d.id}>Dr. {d.user_username || 'Unknown Doctor'}</option>
+              ))}
+            </select>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleShare}
+                disabled={shareLoading}
+                className="flex-1 bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-blue-300 transition"
+              >
+                {shareLoading ? 'Sharing...' : 'Share'}
+              </button>
+              <button
+                type="button"
+                onClick={closeShareModal}
+                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </ProtectedRoute>
   );
 }
