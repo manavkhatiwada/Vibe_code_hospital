@@ -20,7 +20,29 @@ export default function Chatbot() {
   const [loading, setLoading] = useState(false);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [conversationId, setConversationId] = useState(null);
+  const [attachModalOpen, setAttachModalOpen] = useState(false);
+  const [records, setRecords] = useState([]);
+  const [recordsError, setRecordsError] = useState('');
+  const [selectedRecord, setSelectedRecord] = useState(null);
   const messagesEndRef = useRef(null);
+
+  const openAttachModal = async () => {
+    setAttachModalOpen(true);
+    setRecordsError('');
+    try {
+      const { data } = await api.get('/records/');
+      setRecords(data || []);
+    } catch (err) {
+      setRecordsError('Unable to load your records. Please try again.');
+    }
+  };
+
+  const closeAttachModal = () => setAttachModalOpen(false);
+
+  const pickRecord = (record) => {
+    setSelectedRecord(record);
+    setAttachModalOpen(false);
+  };
 
   const buildHospitalRecommendations = async (recommendedDoctor) => {
     try {
@@ -140,11 +162,49 @@ export default function Chatbot() {
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() && !selectedRecord) return;
 
-    const userMsg = input;
+    const userMsg = input.trim() || 'Please explain this report.';
+    const attachedRecord = selectedRecord;
     setInput('');
+    setSelectedRecord(null);
     setLoading(true);
+
+    if (attachedRecord) {
+      try {
+        const persisted = await api.post(
+          `/chatbot/conversations/${conversationId}/messages/`,
+          { message_text: userMsg, medical_record_id: attachedRecord.id }
+        );
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'user',
+            content: persisted.data.user_message.message_text,
+            attachedRecord: persisted.data.user_message.medical_record,
+          },
+          {
+            role: 'assistant',
+            content: persisted.data.assistant_message.message_text,
+            recommendations: null,
+          },
+        ]);
+      } catch (err) {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'user', content: userMsg, attachedRecord },
+          {
+            role: 'assistant',
+            content: "I'm sorry, I couldn't analyze that report right now. Please try again.",
+            recommendations: null,
+          },
+        ]);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     try {
       // POST to our Next.js API route
@@ -239,6 +299,12 @@ ${data.notice ? `\n*(Note: ${data.notice})*` : ''}
               ? 'bg-blue-600 text-white rounded-br-none'
               : 'bg-white border border-gray-100 shadow-sm text-gray-800 rounded-bl-none'
               }`}>
+              {msg.role === 'user' && msg.attachedRecord && (
+                <div className="mb-2 inline-flex items-center gap-1 text-xs font-semibold bg-blue-700/40 px-2 py-1 rounded-full">
+                  📄 {msg.attachedRecord.folder_name || 'Record'}
+                </div>
+              )}
+              {msg.role === 'user' && msg.attachedRecord && <br />}
               {msg.content}
               {msg.role === 'assistant' && msg.recommendations?.hospitals?.length > 0 && (
                 <div className="mt-4 border-t pt-3">
@@ -273,23 +339,81 @@ ${data.notice ? `\n*(Note: ${data.notice})*` : ''}
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSend} className="p-4 bg-white border-t border-gray-100 flex gap-2 w-full">
+      <div className="px-4 bg-white border-t border-gray-100 pt-3">
+        {selectedRecord && (
+          <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold px-3 py-1.5 rounded-full mb-2">
+            📄 {selectedRecord.folder_name || 'Record'}
+            <button
+              type="button"
+              onClick={() => setSelectedRecord(null)}
+              className="text-blue-500 hover:text-blue-800"
+              aria-label="Remove attached record"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
+
+      <form onSubmit={handleSend} className="p-4 pt-0 bg-white flex gap-2 w-full">
+        <button
+          type="button"
+          onClick={openAttachModal}
+          disabled={loading}
+          title="Attach a medical record"
+          className="w-12 h-12 flex items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-blue-600 transition shadow-sm"
+        >
+          📎
+        </button>
         <input
           type="text"
           value={input}
           onChange={e => setInput(e.target.value)}
-          placeholder="Describe your symptoms (e.g. I have a severe headache...)"
+          placeholder={selectedRecord ? 'Ask a question about this report (optional)...' : 'Describe your symptoms (e.g. I have a severe headache...)'}
           className="flex-1 px-4 py-3 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-sm"
           disabled={loading}
         />
         <button
           type="submit"
-          disabled={loading || !input.trim()}
+          disabled={loading || (!input.trim() && !selectedRecord)}
           className="bg-blue-600 text-white w-12 h-12 flex items-center justify-center rounded-full hover:bg-blue-700 disabled:bg-blue-300 transition shadow-md"
         >
           ➤
         </button>
       </form>
+
+      {attachModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <h3 className="text-lg font-bold text-gray-800 mb-1">Attach a record</h3>
+            <p className="text-sm text-gray-500 mb-4">Pick one of your medical records for the assistant to explain.</p>
+            {recordsError && <p className="text-red-500 text-sm mb-3">{recordsError}</p>}
+            {!recordsError && records.length === 0 && (
+              <p className="text-sm text-gray-500 mb-4">You don&apos;t have any uploaded records yet.</p>
+            )}
+            <div className="max-h-64 overflow-y-auto space-y-2 mb-4">
+              {records.map((record) => (
+                <button
+                  key={record.id}
+                  type="button"
+                  onClick={() => pickRecord(record)}
+                  className="w-full text-left border border-gray-200 rounded-lg p-3 hover:border-blue-400 hover:bg-blue-50 transition"
+                >
+                  <p className="font-semibold text-gray-800 text-sm">{record.folder_name || 'General'}</p>
+                  <p className="text-xs text-gray-500 truncate">{record.notes || 'No notes'}</p>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={closeAttachModal}
+              className="w-full bg-gray-100 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-200 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -36,6 +36,13 @@ class ChatMessage(models.Model):
 	)
 	sender_type = models.CharField(max_length=20, choices=SENDER_CHOICES)
 	message_text = models.TextField()
+	medical_record = models.ForeignKey(
+		"medical_records.MedicalRecord",
+		on_delete=models.SET_NULL,
+		null=True,
+		blank=True,
+		related_name="chat_messages",
+	)
 	timestamp = models.DateTimeField(auto_now_add=True)
 
 	class Meta:

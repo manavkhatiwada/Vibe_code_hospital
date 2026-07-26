@@ -19,6 +19,7 @@ export default function MedicalRecords() {
   const [shareDoctor, setShareDoctor] = useState('');
   const [shareLoading, setShareLoading] = useState(false);
   const [shareError, setShareError] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
   const reportFolders = ['General', 'Blood Report', 'Kidney Report', 'Lab Report', 'Imaging Report'];
 
   useEffect(() => {
@@ -104,6 +105,20 @@ export default function MedicalRecords() {
       setShareError(err.response?.data?.doctor_id || err.response?.data?.detail || 'Failed to share. Try again.');
     } finally {
       setShareLoading(false);
+    }
+  };
+
+  const handleDelete = async (recordId) => {
+    if (!window.confirm('Delete this record permanently? This cannot be undone.')) return;
+    setDeletingId(recordId);
+    try {
+      await api.delete(`/records/${recordId}/`);
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete: ' + (err.response?.data?.detail || 'Please try again.'));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -319,6 +334,14 @@ export default function MedicalRecords() {
                           className="bg-blue-50 text-blue-700 border border-blue-200 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-100 transition whitespace-nowrap"
                         >
                           Share
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(rec.id)}
+                          disabled={deletingId === rec.id}
+                          className="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-100 disabled:opacity-50 transition whitespace-nowrap"
+                        >
+                          {deletingId === rec.id ? 'Deleting...' : 'Delete'}
                         </button>
                       </div>
                     </div>

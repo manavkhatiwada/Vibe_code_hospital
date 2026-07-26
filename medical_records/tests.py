@@ -205,3 +205,50 @@ class MedicalRecordApiTests(APITestCase):
 
         record = MedicalRecord.objects.get(id=resp.data["id"])
         self.assertTrue(record.is_private, "Records should be private by default")
+
+    def test_patient_can_delete_own_record(self):
+        self._login(self.client, self.patient_user.email, "S3cretPass!123")
+
+        create_resp = self.client.post(
+            "/api/records/",
+            {"notes": "To be deleted", "folder_name": "Blood Report"},
+            format="json",
+        )
+        self.assertEqual(create_resp.status_code, status.HTTP_201_CREATED, create_resp.data)
+        record_id = create_resp.data["id"]
+
+        delete_resp = self.client.delete(f"/api/records/{record_id}/")
+        self.assertEqual(delete_resp.status_code, status.HTTP_204_NO_CONTENT, delete_resp.data)
+        self.assertFalse(MedicalRecord.objects.filter(id=record_id).exists())
+
+    def test_patient_cannot_delete_another_patients_record(self):
+        other_patient_user = User.objects.create_user(
+            username="patient4",
+            email="patient4@example.com",
+            password="S3cretPass!123",
+            role="PATIENT",
+        )
+        other_patient_profile = Patient.objects.create(user=other_patient_user)
+        other_record = MedicalRecord.objects.create(
+            patient=other_patient_profile, notes="Not yours", folder_name="General"
+        )
+
+        self._login(self.client, self.patient_user.email, "S3cretPass!123")
+        delete_resp = self.client.delete(f"/api/records/{other_record.id}/")
+        self.assertEqual(delete_resp.status_code, status.HTTP_404_NOT_FOUND, delete_resp.data)
+        self.assertTrue(MedicalRecord.objects.filter(id=other_record.id).exists())
+
+    def test_doctor_cannot_delete_a_record(self):
+        self._login(self.client, self.patient_user.email, "S3cretPass!123")
+        create_resp = self.client.post(
+            "/api/records/",
+            {"doctor": str(self.doctor.id), "notes": "Visible to doctor", "is_private": False},
+            format="json",
+        )
+        self.assertEqual(create_resp.status_code, status.HTTP_201_CREATED, create_resp.data)
+        record_id = create_resp.data["id"]
+
+        self._login(self.client, self.doctor_user.email, "S3cretPass!123")
+        delete_resp = self.client.delete(f"/api/records/{record_id}/")
+        self.assertEqual(delete_resp.status_code, status.HTTP_403_FORBIDDEN, delete_resp.data)
+        self.assertTrue(MedicalRecord.objects.filter(id=record_id).exists())

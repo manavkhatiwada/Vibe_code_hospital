@@ -3,92 +3,131 @@ import ProtectedRoute from '../../components/ProtectedRoute';
 import Link from 'next/link';
 import api from '../../utils/api';
 
+const STAT_CONFIG = [
+  { key: 'doctors',      label: 'Available Doctors', icon: '👨‍⚕️', color: 'bg-blue-50 text-blue-700 border-blue-200',   dot: 'bg-blue-500' },
+  { key: 'appointments', label: 'My Appointments',   icon: '📅',    color: 'bg-violet-50 text-violet-700 border-violet-200', dot: 'bg-violet-500' },
+  { key: 'pending',      label: 'Pending',            icon: '⏳',    color: 'bg-amber-50 text-amber-700 border-amber-200',  dot: 'bg-amber-500' },
+  { key: 'completed',    label: 'Completed',          icon: '✅',    color: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+  { key: 'records',      label: 'My Records',         icon: '📂',    color: 'bg-indigo-50 text-indigo-700 border-indigo-200', dot: 'bg-indigo-500' },
+];
+
+const ACTIONS = [
+  { title: 'Find a Doctor',    desc: 'Browse verified specialists and book a slot',       link: '/patient/doctor_list',  icon: '👨‍⚕️', from: 'from-blue-500',   to: 'to-blue-700' },
+  { title: 'My Appointments',  desc: 'View upcoming and past appointments',               link: '/patient/appointments', icon: '📅',    from: 'from-violet-500', to: 'to-violet-700' },
+  { title: 'Medical Records',  desc: 'Upload, manage and share your health reports',      link: '/patient/records',      icon: '📂',    from: 'from-indigo-500', to: 'to-indigo-700' },
+  { title: 'AI Symptom Checker', desc: 'Get instant AI-powered preliminary analysis',    link: '/patient/chatbot',      icon: '🤖',    from: 'from-emerald-500',to: 'to-emerald-700' },
+];
+
 export default function PatientDashboard() {
-  const [stats, setStats] = useState({
-    doctors: 0,
-    appointments: 0,
-    pending: 0,
-    completed: 0,
-    records: 0,
-  });
+  const [stats, setStats]   = useState({ doctors: 0, appointments: 0, pending: 0, completed: 0, records: 0 });
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
-    api.get('/dashboard/stats/')
-      .then((res) => {
-        if (!mounted) return;
-        const data = res.data || {};
-        setStats({
-          doctors: data.available_doctors || 0,
-          appointments: data.my_appointments || 0,
-          pending: data.pending_appointments || 0,
-          completed: data.completed_appointments || 0,
-          records: data.my_records || 0,
-        });
-      })
-      .catch(() => {
-        if (!mounted) return;
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
+    Promise.all([
+      api.get('/dashboard/stats/').catch(() => ({ data: {} })),
+      api.get('/profile/').catch(() => ({ data: {} })),
+    ]).then(([statsRes, profileRes]) => {
+      if (!mounted) return;
+      const d = statsRes.data || {};
+      setStats({
+        doctors:      d.available_doctors       || 0,
+        appointments: d.my_appointments         || 0,
+        pending:      d.pending_appointments    || 0,
+        completed:    d.completed_appointments  || 0,
+        records:      d.my_records              || 0,
       });
-
-    return () => {
-      mounted = false;
-    };
+      setProfile(profileRes.data || null);
+    }).finally(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
   }, []);
+
+  const name = profile?.username || 'there';
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
   return (
     <ProtectedRoute allowedRoles={['patient']}>
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="max-w-6xl mx-auto">
-          <header className="flex justify-between items-center mb-10">
-            <h1 className="text-4xl font-extrabold text-blue-900 tracking-tight">Patient Dashboard</h1>
-            <button className="text-sm font-medium text-red-600 hover:text-red-800" onClick={() => { localStorage.clear(); window.location.href = '/auth/login'; }}>Logout</button>
-          </header>
+      <div className="min-h-screen bg-gray-50">
+        {/* ── Navbar ── */}
+        <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between sticky top-0 z-20 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center shadow">
+              <span className="text-white font-black text-base">+</span>
+            </div>
+            <span className="text-lg font-bold text-blue-700 tracking-tight">Open Care</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm uppercase">
+              {name.charAt(0)}
+            </div>
+            <span className="text-sm font-medium text-gray-700 hidden sm:block">{name}</span>
+            <button
+              onClick={() => { localStorage.clear(); window.location.href = '/auth/login'; }}
+              className="text-sm font-semibold text-red-500 hover:text-red-700 transition"
+            >
+              Logout
+            </button>
+          </div>
+        </nav>
 
+        <div className="max-w-6xl mx-auto px-6 py-10">
+          {/* ── Welcome banner ── */}
+          <div className="bg-linear-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl p-8 mb-8 text-white relative overflow-hidden shadow-lg">
+            <div className="absolute -top-10 -right-10 w-52 h-52 bg-white/10 rounded-full" />
+            <div className="absolute bottom-0 right-32 w-32 h-32 bg-white/5 rounded-full" />
+            <div className="relative z-10">
+              <p className="text-blue-200 text-sm font-medium mb-1">{greeting}</p>
+              <h1 className="text-3xl font-extrabold mb-1 capitalize">{name} 👋</h1>
+              <p className="text-blue-100 text-sm">Here&apos;s an overview of your health journey on Open Care.</p>
+            </div>
+          </div>
+
+          {/* ── Stat cards ── */}
           {loading ? (
-            <div className="text-center py-8 text-gray-500">Loading stats...</div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-24 bg-gray-200 rounded-xl animate-pulse" />
+              ))}
+            </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-              <StatCard title="Available Doctors" value={stats.doctors} />
-              <StatCard title="My Appointments" value={stats.appointments} />
-              <StatCard title="Pending" value={stats.pending} />
-              <StatCard title="Completed" value={stats.completed} />
-              <StatCard title="My Records" value={stats.records} />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+              {STAT_CONFIG.map(({ key, label, icon, color, dot }) => (
+                <div key={key} className={`bg-white border rounded-xl p-4 flex flex-col gap-2 shadow-sm hover:shadow-md transition ${color}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xl">{icon}</span>
+                    <span className={`w-2 h-2 rounded-full ${dot}`} />
+                  </div>
+                  <p className="text-2xl font-extrabold">{stats[key]}</p>
+                  <p className="text-xs font-medium leading-tight">{label}</p>
+                </div>
+              ))}
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <DashboardCard title="Find a Doctor" desc="Browse specialists and book slots" link="/patient/doctor_list" icon="👨‍⚕️" />
-            <DashboardCard title="My Appointments" desc="View upcoming and past appointments" link="/patient/appointments" icon="📅" />
-            <DashboardCard title="Medical Records" desc="Upload and view your test reports" link="/patient/records" icon="📂" />
-            <DashboardCard title="AI Chatbot" desc="Check your symptoms instantly" link="/patient/chatbot" icon="🤖" />
+          {/* ── Section title ── */}
+          <h2 className="text-lg font-bold text-gray-800 mb-4">Quick Actions</h2>
+
+          {/* ── Action cards ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {ACTIONS.map(({ title, desc, link, icon, from, to }) => (
+              <Link key={title} href={link}>
+                <div className="group bg-white rounded-2xl shadow-sm hover:shadow-xl border border-gray-100 overflow-hidden transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+                  <div className={`bg-linear-to-br ${from} ${to} h-24 flex items-center justify-center text-5xl`}>
+                    {icon}
+                  </div>
+                  <div className="p-5">
+                    <h3 className="font-bold text-gray-900 mb-1">{title}</h3>
+                    <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
+                    <span className="inline-block mt-3 text-xs font-semibold text-blue-600 group-hover:underline">Go →</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </div>
     </ProtectedRoute>
-  );
-}
-
-function StatCard({ title, value }) {
-  return (
-    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-      <p className="text-sm text-gray-500">{title}</p>
-      <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-    </div>
-  );
-}
-
-function DashboardCard({ title, desc, link, icon }) {
-  return (
-    <Link href={link}>
-      <div className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-xl border border-gray-100 cursor-pointer transition-all duration-300 transform hover:-translate-y-2 group">
-        <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">{icon}</div>
-        <h3 className="text-xl font-bold text-gray-800 mb-2">{title}</h3>
-        <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
-      </div>
-    </Link>
   );
 }

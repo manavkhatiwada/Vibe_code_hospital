@@ -139,8 +139,7 @@ class PlatformE2EWorkflowTests(APITestCase):
         record_payload = {
             "patient": patient_profile_id,
             "appointment": appointment_id,
-            "diagnosis": "Stable angina (initial assessment)",
-            "prescription": "ECG + lipid panel + low-dose aspirin",
+            "notes": "Stable angina (initial assessment). ECG + lipid panel + low-dose aspirin.",
         }
         create_record = self.client.post("/api/records/", record_payload, format="json")
         self.assertEqual(create_record.status_code, 201, create_record.data)
@@ -154,7 +153,7 @@ class PlatformE2EWorkflowTests(APITestCase):
         patient_records = self.client.get("/api/records/")
         self.assertEqual(patient_records.status_code, 200, patient_records.data)
         self.assertEqual(len(patient_records.data), 1)
-        self.assertEqual(patient_records.data[0]["diagnosis"], record_payload["diagnosis"])
+        self.assertEqual(patient_records.data[0]["notes"], record_payload["notes"])
 
     def test_e2e_cross_hospital_admin_isolation(self):
         # Super-admin creates two hospital-admins and two hospitals.

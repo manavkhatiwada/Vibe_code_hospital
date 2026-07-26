@@ -15,7 +15,7 @@ from .serializers import MedicalRecordSerializer
 class MedicalRecordViewSet(viewsets.ModelViewSet):
     serializer_class = MedicalRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ["get", "post", "head", "options"]
+    http_method_names = ["get", "post", "delete", "head", "options"]
 
     def _get_patient_profile(self, user):
         """
@@ -143,6 +143,18 @@ class MedicalRecordViewSet(viewsets.ModelViewSet):
             return
 
         raise PermissionDenied("Only patients and doctors can create medical records.")
+
+    def perform_destroy(self, instance):
+        """Patients can delete their own records; nobody else can delete via this endpoint."""
+        user = self.request.user
+        if getattr(user, "role", None) != "PATIENT":
+            raise PermissionDenied("Only the owning patient can delete a medical record.")
+
+        patient_profile = self._get_patient_profile(user)
+        if instance.patient_id != patient_profile.id:
+            raise PermissionDenied("You can only delete your own records.")
+
+        instance.delete()
 
     @action(detail=True, methods=["post"], url_path="share")
     def share(self, request, pk=None):

@@ -124,8 +124,7 @@ class EndToEndPatientFlow(APITestCase):
         record_payload = {
             "patient": str(patient_profile.id),
             "appointment": str(appointment_id),
-            "diagnosis": "Mild hypertension",
-            "prescription": "Daily exercise and reduced salt intake",
+            "notes": "Mild hypertension. Daily exercise and reduced salt intake.",
         }
         record_resp = self.client.post("/api/records/", record_payload, format="json")
         self.assertEqual(record_resp.status_code, 201, record_resp.data)
@@ -141,7 +140,7 @@ class EndToEndPatientFlow(APITestCase):
         patient_records_resp = self.client.get("/api/records/")
         self.assertEqual(patient_records_resp.status_code, 200)
         self.assertEqual(len(patient_records_resp.data), 1)
-        self.assertEqual(patient_records_resp.data[0]["diagnosis"], "Mild hypertension")
+        self.assertEqual(patient_records_resp.data[0]["notes"], "Mild hypertension. Daily exercise and reduced salt intake.")
 
     def test_admin_dashboard_metrics(self):
         """Admin: verify dashboard shows correct metrics for appointments and records."""
